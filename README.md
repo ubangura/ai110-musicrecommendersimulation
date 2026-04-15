@@ -39,72 +39,25 @@ A `UserProfile` stores a `favorite_genre`, a `favorite_mood`, a `target_energy` 
 
 **Data flow:**
 
-![Data flow diagram](docs/data_flow.puml)
+```mermaid
+flowchart TD
+    CSV[(data/songs.csv)] --> Parse["Parse rows into Song dicts"]
 
-```plantuml
-@startuml data_flow
+    Parse --> Score
+    Profile["UserProfile
+    genre · mood · energy
+    valence · danceability · acousticness"] --> Score
 
-skinparam activity {
-    BackgroundColor #F5F5F5
-    BorderColor #555555
-    FontName monospaced
-}
-skinparam ArrowColor #555555
-skinparam NoteBackgroundColor #FFFDE7
-skinparam NoteBorderColor #AAAAAA
+    Score["Score each song
+    mood match +2.0
+    genre match +1.5
+    numeric proximity up to +1.0 each"]
 
-title Music Recommender — Data Flow
-
-start
-
-:Read **data/songs.csv**;
-note right
-  id, title, artist, genre, mood,
-  energy, tempo_bpm, valence,
-  danceability, acousticness
-end note
-
-:Parse each row into a **Song** dict;
-
-:Load **UserProfile**;
-note right
-  genre, mood,
-  energy, valence,
-  danceability, acousticness
-end note
-
-:Score each song against UserProfile;
-note right
-  mood match           +2.0
-  genre match          +1.5
-  energy proximity     up to +1.0
-  valence proximity    up to +1.0
-  danceability prox.   up to +1.0
-  acousticness prox.   up to +1.0
-end note
-
-:Collect each song's score and reasons list;
-
-:Apply **ranking rules**;
-note right
-  Sort by score descending
-  Exclude already-heard songs
-  Apply diversity / freshness filters
-end note
-
-:Truncate to top **k** results;
-
-:Join reasons into **explanation** string;
-note right
-  "; "-joined list of reason strings
-  produced during scoring step
-end note
-
-:Return ranked list of\n**(song, score, explanation)**;
-
-stop
-
-@enduml
+    Score --> Collect["Collect song · score · reasons"]
+    Collect --> Sort["Sort by score — highest first"]
+    Sort --> Truncate["Truncate to top k"]
+    Truncate --> Explain["Join reasons into explanation string"]
+    Explain --> Return[/"Return song · score · explanation"/]
 ```
 
 **Sample output:**

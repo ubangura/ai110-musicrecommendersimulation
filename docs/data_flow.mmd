@@ -1,0 +1,18 @@
+flowchart TD
+    CSV[(data/songs.csv)] --> Parse["Parse rows into Song dicts"]
+
+    Parse --> Score
+    Profile["UserProfile
+    genre · mood · energy
+    valence · danceability · acousticness"] --> Score
+
+    Score["Score each song
+    mood match +2.0
+    genre match +1.5
+    numeric proximity up to +1.0 each"]
+
+    Score --> Collect["Collect song · score · reasons"]
+    Collect --> Sort["Sort by score — highest first"]
+    Sort --> Truncate["Truncate to top k"]
+    Truncate --> Explain["Join reasons into explanation string"]
+    Explain --> Return[/"Return song · score · explanation"/]
