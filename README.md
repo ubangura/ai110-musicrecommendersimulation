@@ -62,7 +62,7 @@ flowchart TD
 
 **Sample output:**
 
-![Top Recommendations](recommendations.png)
+![Top Recommendations](assets/recommendations.png)
 
 ---
 
@@ -103,11 +103,49 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+Six profiles were run against the 18-song catalog — three standard taste profiles and three adversarial edge cases designed to stress-test the scoring logic.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+### Standard Profiles
+
+**High-Energy Pop** `genre: pop · mood: happy · energy: 0.90 · valence: 0.87 · danceability: 0.85 · acousticness: 0.10`
+
+![High-Energy Pop results](assets/high-energy-recs.png)
+
+Sunrise City ranked #1 (7.25) with all six reasons firing. Rooftop Lights (#2) earned the mood bonus but no genre match, scoring 1.73 lower. Gym Hero (#3) earned the genre bonus but no mood match. The top 3 clearly reflect the pop/happy cluster, confirming mood and genre weights dominate when present.
+
+**Chill Lofi** `genre: lofi · mood: chill · energy: 0.38 · valence: 0.58 · danceability: 0.55 · acousticness: 0.80`
+
+![Chill Lofi results](assets/chill-lofi-recs.png)
+
+Library Rain and Midnight Coding tied closely at the top (~7.3) — both are lofi/chill and match all numeric features well. Spacewalk Thoughts (#3) earned the mood bonus but no genre match, correctly placing it below the lofi tracks. Focus Flow (#4) is lofi but tagged `focused` not `chill`, so it missed the mood bonus and ranked lower despite being in the same genre.
+
+**Deep Intense Rock** `genre: rock · mood: intense · energy: 0.92 · valence: 0.40 · danceability: 0.60 · acousticness: 0.08`
+
+![Deep Intense Rock results](assets/intense-rock-recs.png)
+
+Storm Runner dominated (#1, 7.33) as the only rock/intense song. Gym Hero (#2) earned the mood match but no genre match. Iron Cathedral (#3) earned no categorical bonuses despite being the most sonically similar song (high energy, low acousticness, low valence) — revealing that the catalog has only one rock song, so genre bonus is a single-use advantage here.
+
+---
+
+### Adversarial / Edge-Case Profiles
+
+**Edge Case: Conflicting Energy + Sad Mood** `genre: blues · mood: sad · energy: 0.90 · high energy with a sad/low-valence profile`
+
+![Conflicting energy + sad mood results](assets/high-energy-sad-mood-recs.png)
+
+This profile was designed to see if a high energy setting would "trick" the system into recommending intense tracks over sad ones. It did not — Porch Light Blues ranked #1 (6.48) with both mood and genre bonuses, despite its energy (0.33) being far from the target (0.90). The mood bonus (+2.0) and genre bonus (+1.5) outweighed the energy proximity penalty. The system correctly prioritised emotional and genre fit over sonic energy. Ranks 2–5 (Iron Cathedral, Storm Runner, Night Drive Loop) are all high-energy tracks with no categorical match — the energy target pulled them up, but they stayed well below Porch Light Blues.
+
+**Edge Case: Genre Not in Catalog** `genre: country · mood: nostalgic · no country songs exist in the dataset`
+
+![Genre not in catalog results](assets/nonexistent-genre-recs.md.png)
+
+With no catalog entries matching genre or mood exactly (only Old Pine Road is tagged `nostalgic`), the system fell back entirely on numeric proximity. Old Pine Road ranked #1 (5.45) solely on its mood match — confirming that a single categorical match (mood) still provides meaningful signal even when genre misses entirely. The remaining results (Midnight Coding, Focus Flow, Library Rain, Coffee Shop Stories) are all acoustic/low-energy tracks that match the numeric profile, which is sensible. The absence of a genre bonus did not cause a failure — the system degraded gracefully.
+
+**Edge Case: Perfectly Neutral Profile** `genre: ambient · mood: focused · all numeric features at 0.50`
+
+![Neutral profile results](assets/neutral-profile-recs.md.png)
+
+With all numeric features at the midpoint, no song has a strong numeric advantage — scores depend heavily on the two categorical matches. Focus Flow (#1, 5.43) won on mood match (focused) alone with near-zero numeric differentiation. Spacewalk Thoughts (#2) won on genre match (ambient). The neutral numeric profile exposed the ranking as almost purely categorical, which confirms that when the user has no strong numeric preference, mood and genre carry the full weight of differentiation. Ties at the margin were broken by whichever song's numeric features happened to cluster nearest 0.50.
 
 ---
 
