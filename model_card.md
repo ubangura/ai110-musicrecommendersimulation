@@ -1,111 +1,58 @@
-# 🎧 Model Card: Music Recommender Simulation
+# Model Card: Music Recommender Simulation
 
-## 1. Model Name  
+## 1. Model Name
 
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
-
----
-
-## 2. Intended Use  
-
-Describe what your recommender is designed to do and who it is for. 
-
-Prompts:  
-
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
+**MoodFirst 1.0**
 
 ---
 
-## 3. How the Model Works  
+## 2. Intended Use
 
-Explain your scoring approach in simple language.  
+A classroom simulation demonstrating how content-based recommender systems work. Useful for understanding feature selection, scoring design, and the tradeoffs between categorical and numeric signals.
 
-Prompts:  
-
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
-
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
+**Not intended for:** Real users, production music services, or any context where recommendations affect what people actually listen to. The catalog is too small and too narrow to reflect genuine musical diversity or individual taste.
 
 ---
 
-## 4. Data  
+## 3. How the Model Works
 
-Describe the dataset the model uses.  
+Each song is scored by comparing it to the user's preferences across six attributes:
 
-Prompts:  
+- **Mood match** — worth the most points (+2.0) because mood most directly reflects what a listener wants in the moment
+- **Genre match** — second highest (+1.5) as a broad style signal
+- **Energy, valence, danceability, acousticness** — each worth up to +1.0 based on how close the song's value is to the user's target. A perfect match scores +1.0; a larger gap scores less; a gap of 1.0 or more scores nothing.
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
-
----
-
-## 5. Strengths  
-
-Where does your system seem to work well  
-
-Prompts:  
-
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
+The song with the highest total score is recommended first. Every result comes with a plain-language explanation listing exactly which attributes contributed points.
 
 ---
 
-## 6. Limitations and Bias 
+## 4. Data
 
-Where the system struggles or behaves unfairly. 
+- **18 songs** across 15 genres: pop, lofi, rock, ambient, jazz, synthwave, indie pop, classical, hip-hop, r&b, folk, edm, metal, blues, soul
+- **7 attributes** per song: mood, energy, tempo, valence, danceability, acousticness, plus genre as a categorical label
+- **6 attributes** used for scoring (tempo excluded due to correlation with energy and danceability)
+---
 
-Prompts:  
+## 5. Limitations and Bias
 
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
+**Mood and genre dominate.** A song that matches both earns +3.5 before any numeric scoring begins. A song with perfect numeric alignment but no categorical match tops out at +4.0 — meaning the gap is small. In a sparse catalog, this makes it easy for the one blues song to rank #1 for any blues-preferring user regardless of whether its audio features actually match.
+
+**The system cannot express a mood range.** A user who likes both `happy` and `chill` depending on context must pick one. The other mood will never score a bonus.
 
 ---
 
-## 7. Evaluation  
+## 6. Evaluation
 
-How you checked whether the recommender behaved as expected. 
+Six user profiles were run against the full catalog and the top 5 results were reviewed for each:
 
-Prompts:  
-
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
-
-No need for numeric metrics unless you created some.
+- **High-Energy Pop, Chill Lofi, Deep Intense Rock** — verified that expected songs clustered at the top and that the scoring reasons matched intuition
+- **Conflicting Energy + Sad Mood** — tested whether high energy would override an emotional mood preference (it did not — categorical bonuses won)
+- **Genre Not in Catalog** — tested graceful degradation when no genre match exists (the system fell back to numeric proximity without errors)
+- **Perfectly Neutral Profile** — tested behavior when all numeric preferences are equal (categorical matches became the sole differentiator)
 
 ---
 
-## 8. Future Work  
+## 7. Ideas for Improvement
 
-Ideas for how you would improve the model next.  
-
-Prompts:  
-
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
-
----
-
-## 9. Personal Reflection  
-
-A few sentences about your experience.  
-
-Prompts:  
-
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+1. **Add a mood range.** Allow users to specify multiple acceptable moods rather than a single value, so the system can serve users with varied listening contexts.
+2. **Expand the catalog and balance genres.** A meaningful genre bonus requires more than one or two songs per genre — otherwise the bonus reflects catalog gaps rather than actual preference alignment.
