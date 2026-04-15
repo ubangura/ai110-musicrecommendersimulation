@@ -17,17 +17,99 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+Real-world recommenders like YouTube's autoplay combine hundreds of signals such as social graphs, audio analysis, natural language from playlist names, likes, plays and blend collaborative filtering ("Users like you also enjoyed…") with content-based filtering (“Because you liked X, here's something similar to X...”).
 
-Some prompts to answer:
+This recommender is content-based. The goal is to demonstrate how feature selection, vector similarity, and a scoring-then-ranking pipeline produce meaningful recommendations.
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+**Song features:**
 
-You can include a simple diagram or bullet list if helpful.
+Each `Song` carries ten attributes loaded from `data/songs.csv`. The features used for scoring are `energy`, `acousticness`, `valence`, and `danceability` (continuous, quantitative) plus `genre` and `mood` (categorical, qualitative). `tempo_bpm` is stored but excluded from scoring because it correlates strongly with `energy` and `danceability` and would double-count that dimension. `title`, `artist`, and `id` are identity fields only.
+
+**UserProfile:**
+
+A `UserProfile` stores a `favorite_genre`, a `favorite_mood`, a `target_energy` (float, 0–1), and a `likes_acoustic` flag. These map directly onto the song features used for scoring. The profile is effectively the user's ideal point in feature space.
+
+**Scoring:**
+
+`score_song` awards explicit points for each attribute match. A mood match earns +2.0 (weighted highest because mood most directly reflects listening intent), a genre match earns +1.5, and each numeric feature (`energy`, `valence`, `danceability`, `acousticness`) earns up to +1.0 based on proximity: `max(0, 1 - |song_value - target|)`. An exact match on energy scores +1.0; a difference of 0.5 scores +0.5; a difference of 1.0 or more scores nothing. Each contribution that earns points produces a reason string (e.g. `"mood match: chill (+2.0)"`).
+
+**Ranking:**
+
+`recommend_songs` scores every song in the catalog, sorts by total score descending, and returns the top `k` results as `(song, score, explanation)` tuples. The explanation is the reasons list joined by `"; "`, so each recommendation is self-documenting.
+
+**Data flow:**
+
+![Data flow diagram](docs/data_flow.puml)
+
+```plantuml
+@startuml data_flow
+
+skinparam activity {
+    BackgroundColor #F5F5F5
+    BorderColor #555555
+    FontName monospaced
+}
+skinparam ArrowColor #555555
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #AAAAAA
+
+title Music Recommender — Data Flow
+
+start
+
+:Read **data/songs.csv**;
+note right
+  id, title, artist, genre, mood,
+  energy, tempo_bpm, valence,
+  danceability, acousticness
+end note
+
+:Parse each row into a **Song** dict;
+
+:Load **UserProfile**;
+note right
+  genre, mood,
+  energy, valence,
+  danceability, acousticness
+end note
+
+:Score each song against UserProfile;
+note right
+  mood match           +2.0
+  genre match          +1.5
+  energy proximity     up to +1.0
+  valence proximity    up to +1.0
+  danceability prox.   up to +1.0
+  acousticness prox.   up to +1.0
+end note
+
+:Collect each song's score and reasons list;
+
+:Apply **ranking rules**;
+note right
+  Sort by score descending
+  Exclude already-heard songs
+  Apply diversity / freshness filters
+end note
+
+:Truncate to top **k** results;
+
+:Join reasons into **explanation** string;
+note right
+  "; "-joined list of reason strings
+  produced during scoring step
+end note
+
+:Return ranked list of\n**(song, score, explanation)**;
+
+stop
+
+@enduml
+```
+
+**Sample output:**
+
+![Top Recommendations](recommendations.png)
 
 ---
 
